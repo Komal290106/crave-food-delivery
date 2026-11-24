@@ -661,7 +661,7 @@ export default function PartnerDashboardPage() {
             </h3>
 
             <p className="text-xs text-stone-500">
-              Ask the customer for their 4-digit Delivery OTP displayed on their live tracking screen.
+              Ask the customer for their 4-digit Delivery OTP for <span className="font-mono font-bold text-charcoal-900">#{activeOrder.orderNumber}</span> (displayed on their live tracking screen).
             </p>
 
             <div className="py-2">

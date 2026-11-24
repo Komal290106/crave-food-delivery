@@ -27,8 +27,11 @@ async function assignNearestPartner(order, pickupCoordinates, maxRadiusMeters = 
       const activePartnerLocs = await PartnerLocation.find({ activeOrderId: { $ne: null } });
       for (const pl of activePartnerLocs) {
         const linkedOrder = await Order.findById(pl.activeOrderId);
-        const isStaleDevOrder = linkedOrder && (Date.now() - new Date(linkedOrder.updatedAt || linkedOrder.createdAt).getTime() > 10 * 60 * 1000);
-        if (!linkedOrder || ['delivered', 'cancelled', 'rejected'].includes(linkedOrder.status) || isStaleDevOrder) {
+        const isStaleDevOrder = linkedOrder && (
+          ['delivered', 'cancelled', 'rejected'].includes(linkedOrder.status) ||
+          (Date.now() - new Date(linkedOrder.createdAt).getTime() > 30 * 60 * 1000)
+        );
+        if (!linkedOrder || isStaleDevOrder) {
           await PartnerLocation.findByIdAndUpdate(pl._id, {
             $set: { activeOrderId: null, updatedAt: new Date() }
           });
