@@ -441,3 +441,34 @@ exports.resetPassword = async (req, res, next) => {
     next(error);
   }
 };
+
+// PATCH /api/auth/dietary-profile - Update customer's SafeBite dietary & allergen preferences
+exports.updateDietaryProfile = async (req, res, next) => {
+  try {
+    const { isJain, isVegan, isPureVeg, isGlutenFree, isDiabeticFriendly, allergies } = req.body;
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.dietaryProfile = {
+      isJain: Boolean(isJain),
+      isVegan: Boolean(isVegan),
+      isPureVeg: Boolean(isPureVeg),
+      isGlutenFree: Boolean(isGlutenFree),
+      isDiabeticFriendly: Boolean(isDiabeticFriendly),
+      allergies: Array.isArray(allergies) ? allergies : []
+    };
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'SafeBite Dietary Shield updated successfully',
+      dietaryProfile: user.dietaryProfile
+    });
+  } catch (error) {
+    next(error);
+  }
+};

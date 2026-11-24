@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { resetToDemoCluster } from '../redux/locationSlice';
 import api from '../services/api';
 import RestaurantCard from '../components/RestaurantCard';
 import {
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react';
 
 export default function DiscoveryPage() {
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const activeLocation = useSelector((state) => state.location);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -163,7 +165,11 @@ export default function DiscoveryPage() {
           <div className="flex items-center gap-2">
             <MapPin className="w-4 h-4 text-citrus-600 flex-shrink-0" />
             <span>
-              <strong>Active Proximity Center:</strong> {activeLocation?.label || activeLocation?.city || 'New Delhi'}
+              <strong>Active Proximity Center:</strong> {
+                (activeLocation?.pincode?.startsWith('110') && (activeLocation?.city?.toLowerCase().includes('nurpur') || !activeLocation?.city))
+                  ? 'Connaught Place, New Delhi (110001)'
+                  : (activeLocation?.label || `${activeLocation?.city || 'New Delhi'} (${activeLocation?.pincode || '110001'})`)
+              }
               {userCoords && ` (${userCoords[1].toFixed(3)}°N, ${userCoords[0].toFixed(3)}°E)`}
               {activeLocation?.isDemoCluster && ' — Demo Kitchen Cluster'}
             </span>
@@ -298,12 +304,13 @@ export default function DiscoveryPage() {
             </button>
             <button
               onClick={() => {
+                dispatch(resetToDemoCluster());
                 setUserCoords([77.2205, 28.6328]);
                 setRadiusKm(15);
                 setSelectedCuisine('');
                 setSearch('');
               }}
-              className="px-4 py-2 rounded-full bg-citrus-600 text-white text-xs font-bold hover:bg-citrus-500 transition-colors"
+              className="px-4 py-2 rounded-full bg-citrus-600 text-white text-xs font-bold hover:bg-citrus-500 transition-colors cursor-pointer"
             >
               Reset to Delhi Demo Cluster
             </button>

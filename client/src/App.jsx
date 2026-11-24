@@ -27,6 +27,11 @@ import CustomerCarePage from './pages/CustomerCarePage';
 import RestaurantDashboardPage from './pages/RestaurantDashboardPage';
 import PartnerDashboardPage from './pages/PartnerDashboardPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import SquadCartPage from './pages/SquadCartPage';
+import MealSubscriptionPage from './pages/MealSubscriptionPage';
+import PartyPlannerPage from './pages/PartyPlannerPage';
+import MysteryBoxPage from './pages/MysteryBoxPage';
+import BiteMatchPage from './pages/BiteMatchPage';
 
 export default function App() {
   const { token, isAuthenticated } = useSelector((state) => state.auth);
@@ -52,6 +57,12 @@ export default function App() {
           <Route path="/restaurants" element={<DiscoveryPage />} />
           <Route path="/restaurants/:id" element={<RestaurantDetailPage />} />
           <Route path="/cart" element={<CartPage />} />
+          <Route path="/squad/:shareCode" element={<SquadCartPage />} />
+          <Route path="/subscriptions" element={<MealSubscriptionPage />} />
+          <Route path="/party-planner" element={<PartyPlannerPage />} />
+          <Route path="/mystery-box" element={<MysteryBoxPage />} />
+          <Route path="/match" element={<BiteMatchPage />} />
+          <Route path="/match/:sessionCode" element={<BiteMatchPage />} />
           <Route path="/offers" element={<OffersPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

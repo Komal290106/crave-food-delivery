@@ -143,6 +143,14 @@ const cartSlice = createSlice({
       state.offerCode = null;
       state.discount = 0;
       syncStorage(state);
+    },
+    setCartState: (state, action) => {
+      const { restaurant, items } = action.payload;
+      state.restaurant = restaurant;
+      state.items = items || [];
+      state.offerCode = null;
+      state.discount = 0;
+      syncStorage(state);
     }
   }
 });
@@ -155,7 +163,8 @@ export const {
   removeItem,
   applyDiscount,
   removeDiscount,
-  clearCart
+  clearCart,
+  setCartState
 } = cartSlice.actions;
 
 export default cartSlice.reducer;

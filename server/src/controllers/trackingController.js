@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const PartnerLocation = require('../models/PartnerLocation');
 const { calculateDistanceKm, calculateEtaMinutes } = require('../services/distanceService');
+const { fetchRoadRoute } = require('../services/routingService');
 
 // GET /api/orders/:id/tracking
 exports.getOrderTracking = async (req, res, next) => {
@@ -31,6 +32,16 @@ exports.getOrderTracking = async (req, res, next) => {
     if (order.status === 'delivered') {
       liveEtaMins = 0;
       distanceToDeliveryKm = 0;
+      // When delivered, delivery partner has reached the customer drop-off location
+      if (order.partnerId) {
+        partnerLiveLocation = {
+          coordinates: order.deliveryAddress.location.coordinates,
+          heading: 0,
+          speed: 0,
+          isOnline: true,
+          updatedAt: order.deliveredAt || new Date()
+        };
+      }
     } else if (order.partnerId) {
       const partnerLocDoc = await PartnerLocation.findOne({ partnerId: order.partnerId._id });
       if (partnerLocDoc) {
@@ -58,6 +69,21 @@ exports.getOrderTracking = async (req, res, next) => {
         order.deliveryAddress.location.coordinates
       );
       liveEtaMins = calculateEtaMinutes(order.prepTimeMins || 20, totalDist);
+    }
+
+    // Compute realistic driving road polyline geometry
+    let routeGeometry = null;
+    // For delivered orders, the route connects the restaurant to the drop-off location
+    const originCoords = order.status === 'delivered' 
+      ? order.restaurantId.location.coordinates 
+      : (partnerLiveLocation?.coordinates || order.restaurantId.location.coordinates);
+    const destCoords = order.deliveryAddress.location.coordinates;
+
+    if (originCoords && destCoords) {
+      const roadRoute = await fetchRoadRoute(originCoords, destCoords);
+      if (roadRoute) {
+        routeGeometry = roadRoute.coordinates;
+      }
     }
 
     res.status(200).json({
@@ -91,7 +117,8 @@ exports.getOrderTracking = async (req, res, next) => {
         liveLocation: partnerLiveLocation
       } : null,
       etaMinutes: liveEtaMins,
-      distanceKm: distanceToDeliveryKm
+      distanceKm: distanceToDeliveryKm,
+      routeCoordinates: routeGeometry
     });
   } catch (error) {
     next(error);

@@ -15,6 +15,11 @@ const adminRoutes = require('./routes/adminRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const supportRoutes = require('./routes/supportRoutes');
+const squadRoutes = require('./routes/squadRoutes');
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
+const partyRoutes = require('./routes/partyRoutes');
+const mysteryRoutes = require('./routes/mysteryRoutes');
+const biteMatchRoutes = require('./routes/biteMatchRoutes');
 
 const app = express();
 
@@ -52,6 +57,11 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/squad', squadRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/party', partyRoutes);
+app.use('/api/mystery', mysteryRoutes);
+app.use('/api/match', biteMatchRoutes);
 
 // Catch 404
 app.use('*', (req, res) => {

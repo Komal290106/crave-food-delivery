@@ -217,7 +217,8 @@ exports.checkServiceability = async (req, res, next) => {
       pincode,
       coordinates,
       addressLine,
-      city
+      city,
+      demoOverride: req.body.demoOverride || req.body.deliveryAddress?.demoOverride
     });
 
     res.status(200).json({

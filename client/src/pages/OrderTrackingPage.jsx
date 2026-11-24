@@ -140,11 +140,52 @@ export default function OrderTrackingPage() {
   };
 
   // Courier GPS Movement Simulator for Demonstration / Evaluation Viva
+  // Uses real road polyline points if available so courier moves smoothly along the actual street network
   const startGpsSimulation = () => {
     if (!trackingData || isSimulating) return;
 
     setIsSimulating(true);
 
+    const roadPoints = trackingData.routeCoordinates;
+    const socket = getSocket();
+
+    // If real road polyline coordinates are available, move along the real streets!
+    if (Array.isArray(roadPoints) && roadPoints.length >= 2) {
+      let currentIndex = 0;
+      const totalPoints = roadPoints.length;
+      // Step interval tuned so simulation takes ~25-30 seconds across the full road route
+      const intervalMs = Math.max(800, Math.min(2000, Math.round(30000 / totalPoints)));
+
+      simulationTimerRef.current = setInterval(() => {
+        currentIndex++;
+        if (currentIndex < totalPoints) {
+          // roadPoints are [lat, lng]. In GeoJSON/Leaflet convention: [lng, lat] for coordinates array
+          const [ptLat, ptLng] = roadPoints[currentIndex];
+          const newCoords = [
+            Math.round(ptLng * 100000) / 100000,
+            Math.round(ptLat * 100000) / 100000
+          ];
+
+          setLiveCourierCoords(newCoords);
+
+          if (socket) {
+            socket.emit('partner:location_tick', {
+              orderId: trackingData.order._id,
+              coordinates: newCoords,
+              heading: 45,
+              speed: 25,
+              isSimulation: true
+            });
+          }
+        } else {
+          clearInterval(simulationTimerRef.current);
+          setIsSimulating(false);
+        }
+      }, intervalMs);
+      return;
+    }
+
+    // Fallback: incremental interpolation if no road geometry exists
     const start = liveCourierCoords || trackingData.restaurant.location.coordinates;
     const dest = trackingData.deliveryAddress.location.coordinates;
 
@@ -154,8 +195,6 @@ export default function OrderTrackingPage() {
     const dLng = (dest[0] - start[0]) / steps;
     const dLat = (dest[1] - start[1]) / steps;
     let stepCount = 0;
-
-    const socket = getSocket();
 
     simulationTimerRef.current = setInterval(async () => {
       stepCount++;
@@ -280,6 +319,7 @@ export default function OrderTrackingPage() {
     { key: 'placed', label: 'Placed' },
     { key: 'accepted', label: 'Accepted' },
     { key: 'preparing', label: 'Preparing' },
+    { key: 'ready_for_pickup', label: 'Packed & Ready' },
     { key: 'picked_up', label: 'Picked Up' },
     { key: 'out_for_delivery', label: 'On The Way' },
     { key: 'delivered', label: 'Delivered' }
@@ -411,44 +451,48 @@ export default function OrderTrackingPage() {
             courierLocation={liveCourierCoords}
             restaurantName={restaurant.name}
             customerAddress={deliveryAddress.addressLine}
+            courierName={partner?.name || 'Courier Partner'}
+            routeCoordinates={trackingData.routeCoordinates}
           />
 
-          {/* Optional Development Testing Simulator */}
-          {order.status !== 'delivered' && (
-            <div className="bg-ivory-100 p-4 rounded-3xl border border-ivory-300 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-citrus-600" />
-                <div>
-                  <span className="text-xs font-bold text-charcoal-900 block">Development Testing Mode:</span>
-                  <span className="text-[11px] text-stone-500">
-                    {partner ? 'Simulate route telemetry for evaluation when physical courier movement is unavailable' : 'Courier dispatch in progress — Live map will track courier location upon assignment'}
-                  </span>
-                </div>
+          {/* Route Simulation for Evaluation / Viva (Available in both live in-flight and delivered replay mode) */}
+          <div className="bg-ivory-100 p-4 rounded-3xl border border-ivory-300 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-citrus-600" />
+              <div>
+                <span className="text-xs font-bold text-charcoal-900 block">
+                  {order.status === 'delivered' ? 'Delivery Replay Simulation:' : 'Live Telemetry Simulation:'}
+                </span>
+                <span className="text-[11px] text-stone-500">
+                  {order.status === 'delivered'
+                    ? 'Replay courier moving along the road network to demonstrate turn-by-turn tracking in viva'
+                    : partner
+                    ? 'Simulate courier moving in real-time along actual road coordinates'
+                    : 'Courier dispatch in progress — Live map will track courier location upon assignment'}
+                </span>
               </div>
+            </div>
 
-              {partner && (
-                <div className="flex items-center gap-2">
-                  {!isSimulating ? (
-                    <button
-                      onClick={startGpsSimulation}
-                      className="px-4 py-2 rounded-full bg-stone-200 hover:bg-stone-300 text-charcoal-900 text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-current text-citrus-600" />
-                      Dev Route Sim
-                    </button>
-                  ) : (
-                    <button
-                      onClick={stopGpsSimulation}
-                      className="px-4 py-2 rounded-full bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm animate-pulse"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      Stop Simulator
-                    </button>
-                  )}
-                </div>
+            <div className="flex items-center gap-2">
+              {!isSimulating ? (
+                <button
+                  onClick={startGpsSimulation}
+                  className="px-4 py-2 rounded-full bg-stone-200 hover:bg-stone-300 text-charcoal-900 text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current text-citrus-600" />
+                  {order.status === 'delivered' ? 'Replay Road Movement' : 'Dev Route Sim'}
+                </button>
+              ) : (
+                <button
+                  onClick={stopGpsSimulation}
+                  className="px-4 py-2 rounded-full bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm animate-pulse"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Stop Simulator
+                </button>
               )}
             </div>
-          )}
+          </div>
 
           {/* Live In-App Telemetry Chat with Delivery Courier */}
           <LiveOrderChat

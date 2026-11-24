@@ -505,14 +505,22 @@ exports.updateOrderStatus = async (req, res, next) => {
 exports.assignOrderPartner = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate('restaurantId', 'name images address location');
+      .populate('restaurantId', 'name images address location')
+      .populate('partnerId', 'name phone partnerDetails');
 
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    if (order.partnerId) {
-      return res.status(400).json({ success: false, message: 'Partner already assigned to this order.' });
+    // If a valid real partner is assigned
+    if (order.partnerId && order.partnerId.name) {
+      return res.status(400).json({ success: false, message: `Partner ${order.partnerId.name} is already assigned to this order.` });
+    }
+
+    // If order.partnerId pointed to a deleted test partner, clean it up so we can reassign
+    if (order.partnerId && !order.partnerId.name) {
+      order.partnerId = null;
+      await Order.findByIdAndUpdate(order._id, { $set: { partnerId: null } });
     }
 
     const eligibleStatuses = [ORDER_STATUS.ACCEPTED, ORDER_STATUS.PREPARING, ORDER_STATUS.READY_FOR_PICKUP];

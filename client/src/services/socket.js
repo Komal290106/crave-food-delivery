@@ -3,8 +3,6 @@ import { io } from 'socket.io-client';
 let socket = null;
 
 export const connectSocket = (token) => {
-  if (!token) return null;
-
   if (socket && socket.connected) {
     return socket;
   }
@@ -12,7 +10,7 @@ export const connectSocket = (token) => {
   const socketUrl = window.location.origin;
 
   socket = io(socketUrl, {
-    auth: { token },
+    auth: { token: token || localStorage.getItem('crave_token') || '' },
     transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionAttempts: 5,

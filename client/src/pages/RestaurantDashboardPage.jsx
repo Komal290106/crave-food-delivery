@@ -175,7 +175,11 @@ export default function RestaurantDashboardPage() {
         .map(p => p.trim())
         .filter(p => /^[1-9][0-9]{5}$/.test(p));
 
-      const res = await api.patch('/restaurants/my/service-area', {
+      const targetEndpoint = selectedRestaurantId
+        ? `/restaurants/${selectedRestaurantId}/service-area`
+        : '/restaurants/my/service-area';
+
+      const res = await api.patch(targetEndpoint, {
         deliveryRadiusKm: parsedRadius,
         serviceablePincodes: parsedPincodes
       });

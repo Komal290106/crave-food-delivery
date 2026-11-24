@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Flame, Compass, ShieldCheck, Heart, Github, Award } from 'lucide-react';
+import { Flame, Compass, ShieldCheck, Heart, Github } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -21,10 +21,6 @@ export default function Footer() {
             <p className="text-sm text-stone-400 max-w-sm leading-relaxed">
               Curated three-sided culinary marketplace connecting discerning diners with Michelin-starred kitchens, heritage bistros, and real-time tracked delivery partners.
             </p>
-            <div className="flex items-center gap-2 text-xs text-citrus-400 font-semibold uppercase tracking-wider">
-              <Award className="w-4 h-4" />
-              Evaluation Benchmark Project 14
-            </div>
           </div>
 
           {/* Navigation Links */}
@@ -104,7 +100,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-500 gap-4">
           <p>
-            © {new Date().getFullYear()} CRAVE Food Technologies Inc. Developed for Final Evaluation.
+            © {new Date().getFullYear()} CRAVE Haute Cuisine Inc. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">

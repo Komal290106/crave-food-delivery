@@ -55,6 +55,17 @@ const menuItemSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // SafeBite Allergen & Dietary Metadata
+  dietaryTags: {
+    type: [String],
+    enum: ['pure_veg', 'jain', 'vegan', 'gluten_free', 'dairy_free', 'nut_free', 'diabetic_friendly', 'keto', 'halal', 'eggless'],
+    default: []
+  },
+  allergens: {
+    type: [String],
+    enum: ['peanuts', 'tree_nuts', 'dairy', 'gluten', 'soy', 'eggs', 'shellfish', 'fish', 'onion_garlic', 'mustard', 'sesame'],
+    default: []
+  },
   addOns: [addOnSchema]
 }, {
   timestamps: true

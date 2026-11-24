@@ -19,7 +19,9 @@ import {
   Bike,
   Utensils,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Dices,
+  Gift
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -416,6 +418,47 @@ export default function HomePage() {
             ))}
           </div>
         )}
+      </section>
+
+      {/* Chef's Culinary Roulette & Mystery Vault Showcase */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-charcoal-950 via-aubergine-950 to-charcoal-900 border-2 border-amber-500/30 p-8 sm:p-12 text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="space-y-4 max-w-xl z-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold uppercase tracking-wider border border-amber-400/30">
+              <Sparkles className="w-3.5 h-3.5" />
+              New Feature: Decision-Free Dining
+            </div>
+            <h2 className="font-serif text-3xl sm:text-4xl font-bold leading-tight">
+              Chef’s Culinary Roulette & Mystery Tasting Vault
+            </h2>
+            <p className="text-stone-300 text-xs sm:text-sm leading-relaxed">
+              Tired of 30-minute menu scrolling? Set your budget and dietary lifestyle, spin the roulette vault, and let Michelin-inspired masterchefs curate a secret feast with a guaranteed <strong className="text-amber-400">30% privilege discount</strong>.
+            </p>
+            <div className="pt-2">
+              <Link
+                to="/mystery-box"
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-citrus-500 to-amber-600 hover:from-amber-400 hover:to-citrus-400 text-charcoal-950 font-black text-xs uppercase tracking-wider shadow-lg transition-all"
+              >
+                <Dices className="w-4 h-4" />
+                <span>Spin Culinary Roulette & Unlock Vault</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
+          <div className="relative z-10 p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md text-center max-w-xs w-full flex-shrink-0 space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border border-amber-400/30">
+              <Gift className="w-7 h-7" />
+            </div>
+            <div>
+              <span className="font-mono text-2xl font-black text-amber-400 block">Flat ₹599 – ₹1,499</span>
+              <span className="text-[11px] text-stone-300">Save up to ₹750 on tasting menus</span>
+            </div>
+            <span className="inline-block text-[10px] uppercase font-bold tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+              Guaranteed Value Assurance
+            </span>
+          </div>
+        </div>
       </section>
 
       {/* The CRAVE Experience Promise */}

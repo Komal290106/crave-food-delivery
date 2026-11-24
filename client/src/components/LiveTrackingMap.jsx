@@ -197,19 +197,34 @@ export default function LiveTrackingMap({
           .bindPopup(`<strong>${courierName}</strong><br/><span style="font-size:11px;color:#666;">Courier Partner En Route</span>`);
       }
 
-      // 4. Draw Route ONLY when valid road route coordinates are explicitly available
-      // (Never draw an invented straight line through buildings)
+      // 4. Draw Route along real roads when coordinates are available
       if (Array.isArray(routeCoordinates) && routeCoordinates.length >= 2) {
+        // Outer glow/casing for high-visibility path
+        L.polyline(routeCoordinates, {
+          color: '#ffffff',
+          weight: 7,
+          opacity: 0.9,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(map);
+
+        // Core orange route path with animated moving dash flow
         polylineRef.current = L.polyline(routeCoordinates, {
           color: '#E85A2A',
-          weight: 4,
-          opacity: 0.85
+          weight: 4.5,
+          opacity: 0.95,
+          className: 'animated-route-flow',
+          lineCap: 'round',
+          lineJoin: 'round'
         }).addTo(map);
+
+        // Ensure both route polyline and endpoints are framed inside map view
+        routeCoordinates.forEach(pt => boundsPoints.push(pt));
       }
 
-      // Fit map bounds to show available markers neatly
+      // Fit map bounds to show all points and route cleanly
       if (boundsPoints.length > 1) {
-        map.fitBounds(boundsPoints, { padding: [50, 50], maxZoom: 16 });
+        map.fitBounds(boundsPoints, { padding: [45, 45], maxZoom: 16 });
       } else if (boundsPoints.length === 1) {
         map.setView(boundsPoints[0], 15);
       }
@@ -225,7 +240,7 @@ export default function LiveTrackingMap({
         mapInstanceRef.current = null;
       }
     };
-  }, [restaurantLocation, deliveryLocation]);
+  }, [restaurantLocation, deliveryLocation, routeCoordinates]);
 
   // Dynamically update or create courier marker position on real-time Socket.IO tick
   useEffect(() => {

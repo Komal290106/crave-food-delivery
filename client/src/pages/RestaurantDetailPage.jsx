@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import api from '../services/api';
 import { addItem } from '../redux/cartSlice';
 import AddOnsModal from '../components/AddOnsModal';
+import { evaluateSafeBite } from '../utils/safeBiteEvaluator';
 import {
   Star,
   Clock,
@@ -16,12 +17,17 @@ import {
   Info,
   CheckCircle2,
   AlertCircle,
-  Search
+  Search,
+  Users,
+  ShieldCheck,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function RestaurantDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
   const { restaurant: cartRestaurant, items: cartItems } = useSelector((state) => state.cart);
 
   const [restaurant, setRestaurant] = useState(null);
@@ -31,6 +37,31 @@ export default function RestaurantDetailPage() {
   const [selectedItemForModal, setSelectedItemForModal] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reviews, setReviews] = useState([]);
+  const [creatingSquad, setCreatingSquad] = useState(false);
+  const [allergenWarningItem, setAllergenWarningItem] = useState(null); // Item triggering allergy alert modal
+
+  // Active dietary & allergen profile from user or guest storage
+  const activeDietaryProfile = user?.dietaryProfile || JSON.parse(localStorage.getItem('crave_guest_safebite') || '{}');
+
+  // Function to create a live SquadCart session
+  const handleStartSquadCart = async () => {
+    if (!user) {
+      navigate('/login?redirect=' + encodeURIComponent(window.location.pathname));
+      return;
+    }
+
+    try {
+      setCreatingSquad(true);
+      const res = await api.post('/squad/create', { restaurantId: id });
+      if (res.data?.success && res.data.squadCart?.shareCode) {
+        navigate(`/squad/${res.data.squadCart.shareCode}`);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to start Squad Order');
+    } finally {
+      setCreatingSquad(false);
+    }
+  };
 
   // Pincode serviceability widget state
   const [checkPincode, setCheckPincode] = useState('');
@@ -91,6 +122,18 @@ export default function RestaurantDetailPage() {
   };
 
   const handleItemAddClick = (item) => {
+    // SafeBite Allergen Guard Evaluation
+    const evalResult = evaluateSafeBite(item, activeDietaryProfile);
+    if (evalResult.status === 'CONFLICT') {
+      // Trigger warning dialog before adding
+      setAllergenWarningItem({ item, conflicts: evalResult.conflicts });
+      return;
+    }
+
+    proceedToAddItem(item);
+  };
+
+  const proceedToAddItem = (item) => {
     if (item.addOns && item.addOns.length > 0) {
       setSelectedItemForModal(item);
       setIsModalOpen(true);
@@ -203,13 +246,26 @@ export default function RestaurantDetailPage() {
               </div>
             </div>
 
-            {/* Kitchen Status Card */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 text-xs text-white space-y-1 self-start md:self-auto">
-              <div className="flex items-center gap-2 font-bold">
-                <span className={`h-2.5 w-2.5 rounded-full ${restaurant.isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
-                <span>{restaurant.isOpen ? 'Accepting Orders' : 'Kitchen Closed'}</span>
+            {/* Kitchen Status & Squad Order Card */}
+            <div className="flex flex-col sm:flex-row md:flex-col gap-2.5 self-start md:self-auto">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 text-xs text-white space-y-1">
+                <div className="flex items-center gap-2 font-bold">
+                  <span className={`h-2.5 w-2.5 rounded-full ${restaurant.isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                  <span>{restaurant.isOpen ? 'Accepting Orders' : 'Kitchen Closed'}</span>
+                </div>
+                <p className="text-[11px] text-stone-300">Min. order ₹{restaurant.minimumOrderAmount}</p>
               </div>
-              <p className="text-[11px] text-stone-300">Min. order ₹{restaurant.minimumOrderAmount}</p>
+
+              {/* Start Squad Order Button */}
+              <button
+                onClick={handleStartSquadCart}
+                disabled={creatingSquad}
+                className="px-4 py-3 rounded-2xl bg-gradient-to-r from-citrus-500 to-citrus-600 hover:from-citrus-400 hover:to-citrus-500 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 whitespace-nowrap"
+                title="Order together with friends from this restaurant"
+              >
+                <Users className="w-4 h-4" />
+                <span>{creatingSquad ? 'Starting Squad...' : '👥 Start Squad Order'}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -314,77 +370,116 @@ export default function RestaurantDetailPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {categories[categoryTitle]?.map((item) => (
-                  <div
-                    key={item._id}
-                    className="flex justify-between gap-4 p-4 rounded-3xl bg-white border border-stone-200/80 shadow-xs hover:shadow-md transition-shadow"
-                  >
-                    {/* Item Details */}
-                    <div className="space-y-1.5 flex-grow pr-2">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-                            item.isVeg ? 'border-emerald-600' : 'border-red-600'
-                          }`}
-                        >
+                {categories[categoryTitle]?.map((item) => {
+                  const safeBite = evaluateSafeBite(item, activeDietaryProfile);
+
+                  return (
+                    <div
+                      key={item._id}
+                      className={`flex justify-between gap-4 p-4 rounded-3xl bg-white border transition-all ${
+                        safeBite.status === 'CONFLICT'
+                          ? 'border-red-300 bg-red-50/20 shadow-xs'
+                          : safeBite.status === 'SAFE'
+                          ? 'border-emerald-300 bg-emerald-50/15 shadow-xs'
+                          : 'border-stone-200/80 shadow-xs hover:shadow-md'
+                      }`}
+                    >
+                      {/* Item Details */}
+                      <div className="space-y-1.5 flex-grow pr-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              item.isVeg ? 'bg-emerald-600' : 'bg-red-600'
+                            className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
+                              item.isVeg ? 'border-emerald-600' : 'border-red-600'
                             }`}
-                          />
-                        </span>
-                        {item.isPopular && (
-                          <span className="text-[10px] font-bold text-citrus-600 uppercase tracking-wider">
-                            ★ Signature
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                item.isVeg ? 'bg-emerald-600' : 'bg-red-600'
+                              }`}
+                            />
+                          </span>
+
+                          {item.isPopular && (
+                            <span className="text-[10px] font-bold text-citrus-600 uppercase tracking-wider">
+                              ★ Signature
+                            </span>
+                          )}
+
+                          {/* SafeBite Dynamic Badge */}
+                          {safeBite.status === 'SAFE' && (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 text-[10px] font-bold flex items-center gap-1">
+                              <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                              <span>Safe for You</span>
+                            </span>
+                          )}
+
+                          {safeBite.status === 'CONFLICT' && (
+                            <span className="px-2 py-0.5 rounded-full bg-red-100 border border-red-300 text-red-800 text-[10px] font-bold flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3 text-red-600" />
+                              <span>Allergen Warning</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 className="font-serif text-base font-bold text-charcoal-900 leading-snug">
+                          {item.name}
+                        </h3>
+
+                        <p className="text-xs font-bold text-charcoal-900">
+                          ₹{item.price}
+                        </p>
+
+                        <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">
+                          {item.description}
+                        </p>
+
+                        {/* Allergen Conflict Details */}
+                        {safeBite.status === 'CONFLICT' && (
+                          <div className="pt-1 flex flex-wrap gap-1">
+                            {safeBite.conflicts.map((conf, cIdx) => (
+                              <span key={cIdx} className="text-[10px] font-semibold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md">
+                                ⚠️ {conf}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {item.addOns && item.addOns.length > 0 && (
+                          <span className="inline-block text-[10px] text-stone-400 font-medium">
+                            Customizable add-ons available
                           </span>
                         )}
                       </div>
 
-                      <h3 className="font-serif text-base font-bold text-charcoal-900 leading-snug">
-                        {item.name}
-                      </h3>
+                      {/* Image & Add Button */}
+                      <div className="relative flex-shrink-0 w-28 h-28 rounded-2xl overflow-hidden bg-stone-100 flex flex-col items-center justify-end">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
 
-                      <p className="text-xs font-bold text-charcoal-900">
-                        ₹{item.price}
-                      </p>
-
-                      <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">
-                        {item.description}
-                      </p>
-
-                      {item.addOns && item.addOns.length > 0 && (
-                        <span className="inline-block text-[10px] text-stone-400 font-medium">
-                          Customizable add-ons available
-                        </span>
-                      )}
+                        {/* ADD Button */}
+                        <button
+                          onClick={() => handleItemAddClick(item)}
+                          disabled={!item.isAvailable || !restaurant.isOpen}
+                          className={`relative z-10 mb-2 px-4 py-1.5 rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1 ${
+                            !item.isAvailable || !restaurant.isOpen
+                              ? 'bg-stone-300 text-stone-500 cursor-not-allowed'
+                              : safeBite.status === 'CONFLICT'
+                              ? 'bg-red-600 hover:bg-red-700 text-white'
+                              : 'bg-white text-citrus-600 hover:bg-citrus-600 hover:text-white'
+                          }`}
+                        >
+                          <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                          {item.isAvailable ? (safeBite.status === 'CONFLICT' ? 'ADD ANYWAY' : 'ADD') : 'SOLD OUT'}
+                        </button>
+                      </div>
                     </div>
-
-                    {/* Image & Add Button */}
-                    <div className="relative flex-shrink-0 w-28 h-28 rounded-2xl overflow-hidden bg-stone-100 flex flex-col items-center justify-end">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-
-                      {/* ADD Button */}
-                      <button
-                        onClick={() => handleItemAddClick(item)}
-                        disabled={!item.isAvailable || !restaurant.isOpen}
-                        className={`relative z-10 mb-2 px-4 py-1.5 rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1 ${
-                          !item.isAvailable || !restaurant.isOpen
-                            ? 'bg-stone-300 text-stone-500 cursor-not-allowed'
-                            : 'bg-white text-citrus-600 hover:bg-citrus-600 hover:text-white'
-                        }`}
-                      >
-                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                        {item.isAvailable ? 'ADD' : 'SOLD OUT'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -488,6 +583,59 @@ export default function RestaurantDetailPage() {
         onClose={() => setIsModalOpen(false)}
         onAddToCart={handleModalAddToCart}
       />
+
+      {/* SafeBite Allergen Conflict Warning Confirmation Dialog */}
+      {allergenWarningItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal-950/75 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-stone-200 overflow-hidden p-6 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-7 h-7 stroke-[2.5]" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-red-600">
+                SafeBite™ Health Alert
+              </span>
+              <h3 className="font-serif text-lg font-bold text-charcoal-900">
+                Potential Allergen Detected!
+              </h3>
+              <p className="text-xs text-stone-600">
+                You are about to add <strong className="text-charcoal-900">{allergenWarningItem.item.name}</strong> which conflicts with your saved dietary profile:
+              </p>
+            </div>
+
+            <div className="p-3 bg-red-50 border border-red-200 rounded-2xl space-y-1">
+              {allergenWarningItem.conflicts.map((conf, idx) => (
+                <div key={idx} className="flex items-center gap-2 text-xs font-bold text-red-800">
+                  <span>⚠️</span>
+                  <span>{conf}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setAllergenWarningItem(null)}
+                className="flex-1 py-2.5 rounded-xl border border-stone-300 text-xs font-bold text-stone-700 hover:bg-stone-100 transition-colors"
+              >
+                Cancel (Keep Me Safe)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const it = allergenWarningItem.item;
+                  setAllergenWarningItem(null);
+                  proceedToAddItem(it);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md transition-colors"
+              >
+                Add Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

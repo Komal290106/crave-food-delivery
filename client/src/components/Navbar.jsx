@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../redux/authSlice';
+import { resetToDemoCluster } from '../redux/locationSlice';
 import LocationModal from './LocationModal';
+import SafeBiteModal from './SafeBiteModal';
 import {
   ShoppingBag,
   MapPin,
@@ -16,7 +18,13 @@ import {
   X,
   Radio,
   Flame,
-  Edit2
+  Edit2,
+  ShieldCheck,
+  Calendar,
+  Users,
+  Dices,
+  Sparkles,
+  Heart
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -30,6 +38,25 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
+  const [safeBiteModalOpen, setSafeBiteModalOpen] = useState(false);
+  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
+
+  // Auto-correct any stale Nurpur/Delhi mismatched state in localStorage
+  useEffect(() => {
+    if (
+      activeLocation?.city?.toLowerCase().includes('nurpur') ||
+      (activeLocation?.pincode?.startsWith('110') && activeLocation?.city !== 'New Delhi')
+    ) {
+      dispatch(resetToDemoCluster());
+    }
+  }, [activeLocation, dispatch]);
+
+  // Close dropdowns on route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setProfileDropdownOpen(false);
+    setMoreDropdownOpen(false);
+  }, [location.pathname]);
 
   const totalCartCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -42,12 +69,12 @@ export default function Navbar() {
   return (
     <>
       <header className="sticky top-0 z-40 bg-ivory-50/95 backdrop-blur-md border-b border-ivory-200 transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+      <div className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between gap-3 lg:gap-4 xl:gap-6 h-20">
           
           {/* Left: Brand & Location */}
-          <div className="flex items-center gap-6">
-            <Link to="/" className="flex items-center gap-2 group">
+          <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+            <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
               <div className="w-10 h-10 rounded-xl bg-aubergine-900 flex items-center justify-center text-ivory-50 shadow-md group-hover:bg-citrus-600 transition-colors">
                 <Flame className="w-6 h-6 text-citrus-500 group-hover:text-white transition-colors" />
               </div>
@@ -65,38 +92,40 @@ export default function Navbar() {
             <button
               type="button"
               onClick={() => setLocationModalOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-ivory-100 hover:bg-ivory-200 border border-ivory-300 text-xs text-charcoal-800 transition-all group"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full bg-ivory-100 hover:bg-ivory-200 border border-ivory-300 text-xs text-charcoal-800 transition-all group whitespace-nowrap flex-shrink-0 cursor-pointer"
               title="Change Delivery Location"
             >
               <MapPin className="w-3.5 h-3.5 text-citrus-600 group-hover:scale-110 transition-transform flex-shrink-0" />
-              <span className="font-medium truncate max-w-[150px] sm:max-w-[190px]">
-                {activeLocation?.city ? `${activeLocation.city} (${activeLocation.pincode || 'PIN'})` : (activeLocation?.label || 'Select Location')}
+              <span className="font-semibold truncate max-w-[110px] sm:max-w-[140px] xl:max-w-[170px]">
+                {activeLocation?.city && !activeLocation.city.toLowerCase().includes('nurpur')
+                  ? `${activeLocation.city} (${activeLocation.pincode || '110001'})`
+                  : 'New Delhi (110001)'}
               </span>
-              <ChevronDown className="w-3 h-3 text-stone-400 group-hover:text-charcoal-700" />
+              <ChevronDown className="w-3 h-3 text-stone-400 group-hover:text-charcoal-700 flex-shrink-0" />
             </button>
           </div>
 
           {/* Center: Role-Based Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-stone-700">
+          <nav className="hidden lg:flex items-center gap-4 xl:gap-5 2xl:gap-6 text-xs xl:text-[13px] 2xl:text-sm font-medium text-stone-700 whitespace-nowrap">
             {/* 1. Restaurant / Chef Owner Navigation */}
             {user?.role === 'restaurant' && (
               <>
                 <Link
                   to="/restaurant-dashboard"
-                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors ${
+                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors whitespace-nowrap ${
                     location.pathname === '/restaurant-dashboard' ? 'text-citrus-600 font-semibold' : ''
                   }`}
                 >
-                  <Flame className="w-4 h-4 text-citrus-600" />
-                  Kitchen Console
+                  <Flame className="w-4 h-4 text-citrus-600 flex-shrink-0" />
+                  <span>Kitchen Console</span>
                 </Link>
                 <Link
                   to="/support"
-                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors ${
+                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors whitespace-nowrap ${
                     location.pathname === '/support' ? 'text-citrus-600 font-semibold' : ''
                   }`}
                 >
-                  Customer Care
+                  <span>Customer Care</span>
                 </Link>
               </>
             )}
@@ -106,20 +135,20 @@ export default function Navbar() {
               <>
                 <Link
                   to="/partner-dashboard"
-                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors ${
+                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors whitespace-nowrap ${
                     location.pathname === '/partner-dashboard' ? 'text-citrus-600 font-semibold' : ''
                   }`}
                 >
-                  <Radio className="w-4 h-4 text-citrus-600 animate-pulse" />
-                  Courier Fleet Portal
+                  <Radio className="w-4 h-4 text-citrus-600 animate-pulse flex-shrink-0" />
+                  <span>Courier Fleet Portal</span>
                 </Link>
                 <Link
                   to="/support"
-                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors ${
+                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors whitespace-nowrap ${
                     location.pathname === '/support' ? 'text-citrus-600 font-semibold' : ''
                   }`}
                 >
-                  Customer Care
+                  <span>Customer Care</span>
                 </Link>
               </>
             )}
@@ -129,37 +158,37 @@ export default function Navbar() {
               <>
                 <Link
                   to="/admin-dashboard"
-                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors ${
+                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors whitespace-nowrap ${
                     location.pathname === '/admin-dashboard' ? 'text-citrus-600 font-semibold' : ''
                   }`}
                 >
-                  Platform Governance
+                  <span>Platform Governance</span>
                 </Link>
                 <Link
                   to="/restaurant-dashboard"
-                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors ${
+                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors whitespace-nowrap ${
                     location.pathname === '/restaurant-dashboard' ? 'text-citrus-600 font-semibold' : ''
                   }`}
                 >
-                  <Flame className="w-4 h-4 text-citrus-600" />
-                  Kitchen Console
+                  <Flame className="w-4 h-4 text-citrus-600 flex-shrink-0" />
+                  <span>Kitchen Console</span>
                 </Link>
                 <Link
                   to="/restaurants"
-                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors ${
+                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors whitespace-nowrap ${
                     location.pathname === '/restaurants' ? 'text-citrus-600 font-semibold' : ''
                   }`}
                 >
-                  <Compass className="w-4 h-4" />
-                  Inspect Diners
+                  <Compass className="w-4 h-4 flex-shrink-0" />
+                  <span>Inspect Diners</span>
                 </Link>
                 <Link
                   to="/support"
-                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors ${
+                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors whitespace-nowrap ${
                     location.pathname === '/support' ? 'text-citrus-600 font-semibold' : ''
                   }`}
                 >
-                  Customer Care
+                  <span>Customer Care</span>
                 </Link>
               </>
             )}
@@ -169,66 +198,176 @@ export default function Navbar() {
               <>
                 <Link
                   to="/restaurants"
-                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors ${
-                    location.pathname === '/restaurants' ? 'text-citrus-600 font-semibold' : ''
+                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors whitespace-nowrap ${
+                    location.pathname === '/restaurants' ? 'text-citrus-600 font-bold' : ''
                   }`}
                 >
-                  <Compass className="w-4 h-4" />
-                  Restaurants
+                  <Compass className="w-4 h-4 flex-shrink-0" />
+                  <span>Restaurants</span>
                 </Link>
+
+                <Link
+                  to="/match"
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all whitespace-nowrap ${
+                    location.pathname.startsWith('/match')
+                      ? 'bg-rose-50 border-rose-300 text-rose-700 font-bold shadow-2xs'
+                      : 'hover:bg-rose-50/80 border-rose-200/80 text-rose-600 font-semibold'
+                  }`}
+                  title="BiteMatch - Food Swipe & Match with Friends / Partner"
+                >
+                  <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500 flex-shrink-0 animate-pulse" />
+                  <span>BiteMatch</span>
+                </Link>
+
+                <Link
+                  to="/mystery-box"
+                  className={`flex items-center gap-1.5 hover:text-amber-600 transition-colors whitespace-nowrap ${
+                    location.pathname === '/mystery-box' ? 'text-amber-600 font-semibold' : ''
+                  }`}
+                  title="Chef's Culinary Roulette & Mystery Tasting Vault"
+                >
+                  <Dices className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <span>Mystery Vault</span>
+                </Link>
+
+                <Link
+                  to="/party-planner"
+                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors whitespace-nowrap ${
+                    location.pathname === '/party-planner' ? 'text-citrus-600 font-semibold' : ''
+                  }`}
+                  title="Host-A-Party Bulk Feast Planner"
+                >
+                  <Users className="w-4 h-4 text-citrus-600 flex-shrink-0" />
+                  <span>Party Planner</span>
+                </Link>
+
+                <Link
+                  to="/subscriptions"
+                  className={`hidden xl:flex items-center gap-1.5 hover:text-citrus-600 transition-colors whitespace-nowrap ${
+                    location.pathname === '/subscriptions' ? 'text-citrus-600 font-semibold' : ''
+                  }`}
+                  title="Daily Lunch Desk Scheduler"
+                >
+                  <Calendar className="w-4 h-4 text-citrus-600 flex-shrink-0" />
+                  <span>Desk Lunch</span>
+                </Link>
+
+                {/* Visible on 2xl ultra-wide monitors */}
                 <Link
                   to="/offers"
-                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors ${
+                  className={`hidden 2xl:flex items-center gap-1.5 hover:text-citrus-600 transition-colors whitespace-nowrap ${
                     location.pathname === '/offers' ? 'text-citrus-600 font-semibold' : ''
                   }`}
                 >
-                  <Tag className="w-4 h-4" />
-                  Offers
+                  <Tag className="w-4 h-4 flex-shrink-0" />
+                  <span>Offers</span>
                 </Link>
+
                 <Link
                   to="/tracking"
-                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors ${
+                  className={`hidden 2xl:flex items-center gap-1.5 hover:text-citrus-600 transition-colors whitespace-nowrap ${
                     location.pathname.startsWith('/tracking') ? 'text-citrus-600 font-semibold' : ''
                   }`}
                 >
-                  <Radio className="w-4 h-4 text-emerald-600 animate-pulse" />
-                  Live Tracker
+                  <Radio className="w-4 h-4 text-emerald-600 animate-pulse flex-shrink-0" />
+                  <span>Live Tracker</span>
                 </Link>
-                {isAuthenticated && (
-                  <Link
-                    to="/orders"
-                    className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors ${
-                      location.pathname === '/orders' ? 'text-citrus-600 font-semibold' : ''
-                    }`}
+
+                {/* More Dropdown for mid-screen laptops/desktops */}
+                <div className="relative 2xl:hidden flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setMoreDropdownOpen(!moreDropdownOpen)}
+                    className="flex items-center gap-1 hover:text-citrus-600 transition-colors py-1 cursor-pointer font-medium"
                   >
-                    <Clock className="w-4 h-4" />
-                    My Orders
-                  </Link>
-                )}
-                <Link
-                  to="/support"
-                  className={`flex items-center gap-1.5 hover:text-citrus-600 transition-colors ${
-                    location.pathname === '/support' ? 'text-citrus-600 font-semibold' : ''
-                  }`}
-                >
-                  Customer Care
-                </Link>
+                    <span>More</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${moreDropdownOpen ? 'rotate-180 text-citrus-600' : 'text-stone-400'}`} />
+                  </button>
+
+                  {moreDropdownOpen && (
+                    <div 
+                      className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-stone-200 py-2 z-50 animate-fadeIn"
+                      onMouseLeave={() => setMoreDropdownOpen(false)}
+                    >
+                      <Link
+                        to="/subscriptions"
+                        onClick={() => setMoreDropdownOpen(false)}
+                        className="xl:hidden flex items-center gap-2.5 px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 hover:text-citrus-600"
+                      >
+                        <Calendar className="w-4 h-4 text-citrus-600" />
+                        <div>
+                          <div className="font-semibold text-charcoal-900">Desk Lunch</div>
+                          <div className="text-[10px] text-stone-400">Meal subscriptions</div>
+                        </div>
+                      </Link>
+
+                      <Link
+                        to="/offers"
+                        onClick={() => setMoreDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 hover:text-citrus-600"
+                      >
+                        <Tag className="w-4 h-4 text-amber-500" />
+                        <div>
+                          <div className="font-semibold text-charcoal-900">Offers & Coupons</div>
+                          <div className="text-[10px] text-stone-400">Gourmet deals</div>
+                        </div>
+                      </Link>
+
+                      <Link
+                        to="/tracking"
+                        onClick={() => setMoreDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 hover:text-citrus-600"
+                      >
+                        <Radio className="w-4 h-4 text-emerald-600" />
+                        <div>
+                          <div className="font-semibold text-charcoal-900">Live Order Tracker</div>
+                          <div className="text-[10px] text-stone-400">GPS tracking</div>
+                        </div>
+                      </Link>
+
+                      <Link
+                        to="/support"
+                        onClick={() => setMoreDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 hover:text-citrus-600 border-t border-stone-100"
+                      >
+                        <ShieldCheck className="w-4 h-4 text-indigo-500" />
+                        <div>
+                          <div className="font-semibold text-charcoal-900">Customer Care</div>
+                          <div className="text-[10px] text-stone-400">Concierge & support</div>
+                        </div>
+                      </Link>
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </nav>
 
           {/* Right: Cart & Auth */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3.5 flex-shrink-0">
+            {/* SafeBite Dietary & Allergy Guard Button */}
+            {(!user || user.role === 'customer') && (
+              <button
+                type="button"
+                onClick={() => setSafeBiteModalOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold transition-all shadow-2xs group whitespace-nowrap flex-shrink-0"
+                title="Configure SafeBite Dietary & Allergen Shield"
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform flex-shrink-0" />
+                <span className="hidden sm:inline">SafeBite™ Shield</span>
+              </button>
+            )}
+
             {/* Cart Button: Visible exclusively to Customers & Guests */}
             {(!user || user.role === 'customer') && (
               <Link
                 to="/cart"
-                className="relative p-2.5 rounded-full bg-ivory-100 hover:bg-ivory-200 text-charcoal-900 border border-ivory-300 transition-colors flex items-center justify-center group"
+                className="relative p-2 rounded-full bg-ivory-100 hover:bg-ivory-200 text-charcoal-900 border border-ivory-300 transition-colors flex items-center justify-center group flex-shrink-0"
                 title="View Cart"
               >
-                <ShoppingBag className="w-5 h-5 text-charcoal-900 group-hover:scale-105 transition-transform" />
+                <ShoppingBag className="w-5 h-5 text-charcoal-900 group-hover:scale-105 transition-transform flex-shrink-0" />
                 {totalCartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-citrus-600 text-white text-[11px] font-bold h-5 min-w-[20px] px-1 rounded-full flex items-center justify-center shadow-sm">
+                  <span className="absolute -top-1 -right-1 bg-citrus-600 text-white text-[10px] font-bold h-4.5 min-w-[18px] px-1 rounded-full flex items-center justify-center shadow-sm">
                     {totalCartCount}
                   </span>
                 )}
@@ -237,18 +376,18 @@ export default function Navbar() {
 
             {/* User Profile / Auth */}
             {isAuthenticated ? (
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 <button
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-full bg-ivory-100 hover:bg-ivory-200 border border-ivory-300 text-sm font-medium text-charcoal-900 transition-colors"
+                  className="flex items-center gap-1.5 sm:gap-2 pl-2.5 sm:pl-3 pr-2 py-1.5 rounded-full bg-ivory-100 hover:bg-ivory-200 border border-ivory-300 text-sm font-medium text-charcoal-900 transition-colors whitespace-nowrap"
                 >
-                  <div className="w-7 h-7 rounded-full bg-aubergine-800 text-white flex items-center justify-center text-xs font-bold uppercase">
+                  <div className="w-7 h-7 rounded-full bg-aubergine-800 text-white flex items-center justify-center text-xs font-bold uppercase flex-shrink-0">
                     {user?.name?.charAt(0) || 'U'}
                   </div>
                   <span className="hidden sm:inline font-semibold text-xs max-w-[100px] truncate">
                     {user?.name?.split(' ')[0]}
                   </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-stone-500" />
+                  <ChevronDown className="w-3.5 h-3.5 text-stone-500 flex-shrink-0" />
                 </button>
 
                 {/* Dropdown Menu */}
@@ -312,25 +451,25 @@ export default function Navbar() {
 
                     <button
                       onClick={handleLogout}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-stone-100 mt-1"
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-stone-100 mt-1 cursor-pointer"
                     >
-                      <LogOut className="w-4 h-4" />
+                      <LogOut className="w-4 h-4 flex-shrink-0" />
                       Sign Out
                     </button>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                 <Link
                   to="/login"
-                  className="px-4 py-2 text-xs font-semibold text-charcoal-900 hover:text-citrus-600 transition-colors"
+                  className="px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-charcoal-900 hover:text-citrus-600 transition-colors whitespace-nowrap"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/register"
-                  className="px-4 py-2 rounded-full bg-citrus-600 hover:bg-citrus-500 text-white text-xs font-semibold shadow-sm transition-all"
+                  className="px-3 sm:px-4 py-1.5 rounded-full bg-citrus-600 hover:bg-citrus-500 text-white text-xs font-semibold shadow-sm transition-all whitespace-nowrap"
                 >
                   Sign Up
                 </Link>
@@ -425,6 +564,21 @@ export default function Navbar() {
                 Explore Restaurants
               </Link>
               <Link
+                to="/mystery-box"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block py-2 text-base font-bold text-amber-600 hover:text-amber-700"
+              >
+                🎲 Chef's Mystery Vault
+              </Link>
+              <Link
+                to="/match"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 py-2 text-base font-bold text-rose-600 hover:text-rose-700"
+              >
+                <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
+                <span>BiteMatch (Swipe to Match)</span>
+              </Link>
+              <Link
                 to="/offers"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block py-2 text-base font-medium text-stone-800 hover:text-citrus-600"
@@ -463,6 +617,12 @@ export default function Navbar() {
     <LocationModal
       isOpen={locationModalOpen}
       onClose={() => setLocationModalOpen(false)}
+    />
+
+    {/* SafeBite Dietary & Allergy Guard Modal */}
+    <SafeBiteModal
+      isOpen={safeBiteModalOpen}
+      onClose={() => setSafeBiteModalOpen(false)}
     />
   </>
 );

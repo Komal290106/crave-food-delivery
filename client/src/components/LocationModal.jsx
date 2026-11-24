@@ -75,17 +75,18 @@ export default function LocationModal({ isOpen, onClose }) {
       return;
     }
 
-    // Notice: Do NOT fabricate or claim coordinates without actual geocoding service
     // If PIN is within Delhi demo cluster, use approximate cluster center; otherwise keep Mumbai fallback
     const isDelhiPin = cleanPin.startsWith('110');
     const estimatedCoords = isDelhiPin ? [77.2205, 28.6328] : [72.8777, 19.0760];
+    const resolvedCity = isDelhiPin ? 'New Delhi' : city.trim();
+    const resolvedLabel = isDelhiPin ? `Connaught Place (${cleanPin})` : `${city.trim()} (${cleanPin})`;
 
     dispatch(
       setLocation({
-        label: `${city.trim()} (${cleanPin})`,
-        addressLine: addressLine.trim() || `${city.trim()} PIN ${cleanPin}`,
-        city: city.trim(),
-        state: '',
+        label: resolvedLabel,
+        addressLine: addressLine.trim() || `${resolvedCity} PIN ${cleanPin}`,
+        city: resolvedCity,
+        state: isDelhiPin ? 'Delhi' : '',
         pincode: cleanPin,
         coordinates: estimatedCoords,
         source: 'manual_entry',

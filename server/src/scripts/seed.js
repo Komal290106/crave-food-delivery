@@ -519,6 +519,9 @@ async function seedDatabase() {
 
     const seededRestaurants = [];
     for (const rData of restaurantsData) {
+      if (rData.priceForTwo) {
+        rData.priceForTwo = Math.min(480, Math.max(280, Math.round(rData.priceForTwo * 0.4)));
+      }
       let r = await Restaurant.findOne({ name: rData.name });
       if (r) {
         Object.assign(r, rData);
@@ -1411,10 +1414,51 @@ async function seedDatabase() {
       }
     ];
 
-    // Safely refresh menu items for seeded restaurants
+    // Safely refresh menu items for seeded restaurants with student-friendly, affordable prices
     console.log(`[Seed] Inserting ${menuItemsData.length} artisanal dishes across 10 kitchens...`);
     await MenuItem.deleteMany({ restaurantId: { $in: seededRestaurants.map(r => r._id) } });
-    const seededMenuItems = await MenuItem.insertMany(menuItemsData);
+
+    function roundToNicePrice(val) {
+      const base = Math.round(val / 10) * 10;
+      return base - 1 > 0 ? base - 1 : base;
+    }
+
+    function calculateAffordablePrice(oldPrice, category, name) {
+      const n = (name || '').toLowerCase();
+      const c = (category || '').toLowerCase();
+      if ((c.includes('bread') || n.includes('naan') || n.includes('roti') || n.includes('kulcha')) && !n.includes('kebab')) {
+        return Math.min(59, Math.max(35, roundToNicePrice(oldPrice * 0.4)));
+      }
+      if (c.includes('beverage') || c.includes('cooler') || c.includes('mocktail') || n.includes('lemonade') || n.includes('kahwa') || n.includes('spritz') || n.includes('hot chocolate')) {
+        return Math.min(99, Math.max(49, roundToNicePrice(oldPrice * 0.4)));
+      }
+      const isTartDessert = (n.includes(' tart') || n.endsWith('tart')) && !n.includes('tartufo');
+      if (c.includes('dessert') || c.includes('dolci') || c.includes('postres') || c.includes('pâtisserie') || c.includes('cake') || n.includes('tiramisu') || n.includes('churros') || n.includes('kulfi') || n.includes('mousse') || n.includes('éclair') || isTartDessert || n.includes('pudding') || n.includes('macaron') || n.includes('shahi tukda') || n.includes('crème brûlée') || n.includes('cheesecake') || n.includes('lava dome') || n.includes('mille-feuille')) {
+        return Math.min(129, Math.max(69, roundToNicePrice(oldPrice * 0.35)));
+      }
+      if (c.includes('starter') || c.includes('appetizer') || c.includes('antipasti') || c.includes('dim sum') || c.includes('taco') || c.includes('small') || c.includes('robata') || c.includes('maki') || c.includes('sushi') || c.includes('antojitos') || n.includes('kebab') || n.includes('tikka') || n.includes('gyoza') || n.includes('yakitori') || n.includes('roll') || n.includes('nachos') || n.includes('guacamole') || n.includes('calamari') || n.includes('croissant') || n.includes('soup') || n.includes('vol-au-vent')) {
+        return Math.min(179, Math.max(99, roundToNicePrice(oldPrice * 0.35)));
+      }
+      if (oldPrice >= 900) {
+        return Math.min(289, Math.max(229, roundToNicePrice(oldPrice * 0.28)));
+      }
+      return Math.min(239, Math.max(149, roundToNicePrice(oldPrice * 0.35)));
+    }
+
+    const affordableMenuData = menuItemsData.map(item => {
+      const p = calculateAffordablePrice(item.price, item.category, item.name);
+      const addOns = (item.addOns || []).map(ad => ({
+        ...ad,
+        price: Math.min(45, Math.max(20, Math.round((ad.price || 50) * 0.28)))
+      }));
+      return {
+        ...item,
+        price: p,
+        addOns
+      };
+    });
+
+    const seededMenuItems = await MenuItem.insertMany(affordableMenuData);
 
     console.log('[Seed] Ensuring promotional discount coupons...');
     const offersData = [

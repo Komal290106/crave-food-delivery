@@ -8,6 +8,7 @@ router.post('/login', authController.login);
 router.get('/me', authenticate, authController.getMe);
 router.post('/address', authenticate, authController.addAddress);
 router.delete('/address/:id', authenticate, authController.deleteAddress);
+router.patch('/dietary-profile', authenticate, authController.updateDietaryProfile);
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
 

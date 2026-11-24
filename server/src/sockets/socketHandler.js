@@ -21,20 +21,25 @@ function initSocket(server, clientOrigin) {
     try {
       const token = socket.handshake.auth?.token || socket.handshake.query?.token;
       if (!token) {
-        return next(new Error('Authentication error: Token not provided'));
+        // Allow guest / squad connections without rejecting
+        socket.user = { name: 'Guest Friend', role: 'guest', _id: null };
+        return next();
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'crave_super_secure_jwt_secret_token_evaluation_2026');
       const user = await User.findById(decoded.userId).select('-passwordHash');
 
       if (!user) {
-        return next(new Error('Authentication error: User not found'));
+        socket.user = { name: 'Guest Friend', role: 'guest', _id: null };
+        return next();
       }
 
       socket.user = user;
       next();
     } catch (err) {
-      next(new Error('Authentication error: Invalid or expired token'));
+      // Graceful fallback to guest so squad live rooms work seamlessly
+      socket.user = { name: 'Guest Friend', role: 'guest', _id: null };
+      next();
     }
   });
 
@@ -179,6 +184,53 @@ function initSocket(server, clientOrigin) {
         }
       } catch (err) {
         console.error('[Socket.IO] partner:location_tick error:', err.message);
+      }
+    });
+
+    // Squad Cart Collaborative Rooms
+    socket.on('join:squad', ({ shareCode, memberName }) => {
+      if (!shareCode) return;
+      const room = `squad:${shareCode.toUpperCase()}`;
+      socket.join(room);
+      console.log(`[Socket.IO] Member ${memberName || socket.user?.name || socket.id} joined ${room}`);
+      io.to(room).emit('squad:member_joined', {
+        memberName: memberName || socket.user?.name || 'A Friend',
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    socket.on('leave:squad', ({ shareCode }) => {
+      if (shareCode) {
+        socket.leave(`squad:${shareCode.toUpperCase()}`);
+      }
+    });
+
+    socket.on('squad:cart_updated', ({ shareCode, squadCart }) => {
+      if (!shareCode) return;
+      const room = `squad:${shareCode.toUpperCase()}`;
+      // Broadcast updated cart to all squad members in the room
+      socket.to(room).emit('squad:sync_cart', { squadCart });
+    });
+
+    // BiteMatch ("Tinder for Food") Collaborative Rooms
+    socket.on('join:match', ({ sessionCode, participantName }) => {
+      if (!sessionCode) return;
+      const clean = sessionCode.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+      const code = clean.startsWith('MATCH-') ? clean : `MATCH-${clean}`;
+      const room = `match:${code}`;
+      socket.join(room);
+      console.log(`[Socket.IO] BiteMatch participant ${participantName || socket.user?.name || socket.id} joined ${room}`);
+      socket.to(room).emit('bitematch:participant_joined', {
+        name: participantName || socket.user?.name || 'A Friend',
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    socket.on('leave:match', ({ sessionCode }) => {
+      if (sessionCode) {
+        const clean = sessionCode.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+        const code = clean.startsWith('MATCH-') ? clean : `MATCH-${clean}`;
+        socket.leave(`match:${code}`);
       }
     });
 

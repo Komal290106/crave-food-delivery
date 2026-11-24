@@ -67,6 +67,19 @@ const userSchema = new mongoose.Schema({
     enum: ['active', 'suspended', 'pending'],
     default: 'active'
   },
+  // SafeBite Customer Dietary & Allergy Profile
+  dietaryProfile: {
+    isJain: { type: Boolean, default: false },
+    isVegan: { type: Boolean, default: false },
+    isPureVeg: { type: Boolean, default: false },
+    isGlutenFree: { type: Boolean, default: false },
+    isDiabeticFriendly: { type: Boolean, default: false },
+    allergies: {
+      type: [String],
+      enum: ['peanuts', 'tree_nuts', 'dairy', 'gluten', 'soy', 'eggs', 'shellfish', 'fish', 'onion_garlic', 'mustard', 'sesame'],
+      default: []
+    }
+  },
   // Password Reset
   passwordResetTokenHash: { type: String, default: null },
   passwordResetExpires: { type: Date, default: null }
